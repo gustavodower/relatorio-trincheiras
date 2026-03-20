@@ -371,10 +371,10 @@ function renderLoteMap(lote) {
     svg += '<text x="' + tx(cx) + '" y="' + ty(cy) + '" text-anchor="middle" fill="' + color + '" font-size="11" font-weight="700" opacity="' + (isActive ? '1' : '0.5') + '">' + areaId + '</text>';
   });
 
-  // Draw all houses as small dots
+  // Draw houses in same area as small dots
   Object.entries(mapData.houses).forEach(([id, pt]) => {
-    if (pt.x && pt.y) {
-      svg += '<circle cx="' + tx(pt.x) + '" cy="' + ty(pt.y) + '" r="2" fill="#94a3b8" opacity="0.3"/>';
+    if (pt.x && pt.y && pt.area === house.area) {
+      svg += '<circle cx="' + tx(pt.x) + '" cy="' + ty(pt.y) + '" r="2.5" fill="' + (AREA_COLORS[pt.area] || '#94a3b8') + '" opacity="0.4"/>';
     }
   });
 
@@ -542,7 +542,7 @@ function formatScientific(val) {
   return `${coef} &times; 10${superExp}`;
 }
 
-function gerarBarraPermeabilidadeE_Mapa(k, cor, lote) {
+function gerarBarraPermeabilidadeE_Mapa(k, cor, lote, casa) {
   let logK = Math.log10(k);
   if (!isFinite(logK)) logK = -8;
   
@@ -582,6 +582,7 @@ function gerarBarraPermeabilidadeE_Mapa(k, cor, lote) {
           <div class="perm-details">
             <span class="perm-value-huge">${formatScientific(k)} <span class="perm-unit">m/s</span></span>
             <span class="perm-class-badge ${badgeClass}">${labelLit}</span>
+            ${casa && casa.sp_area ? '<div style="margin-top:10px;padding-top:8px;border-top:1px solid #e2e8f0;font-size:0.8rem;color:#475569;"><span style="font-weight:600;">Área de Infiltração:</span> <span style="font-weight:800;color:#1e293b;">' + casa.sp_area + '</span></div>' : ''}
           </div>
         </div>
       </div>
@@ -629,8 +630,8 @@ function gerarGaugeImpermeabilidade(casa, cor) {
   const pctImp = (imp / total * 100);
   const pctPerm = (perm / total * 100);
 
-  // Cor baseada na % impermeável: <50% verde, 50-70% amarelo, >70% vermelho
-  let barCor = "#15803d";
+  // Cor da área impermeável: sempre cinza escuro para contrastar com verde
+  let barCor = "#64748b";
   if (pctImp > 70) barCor = "#c62828";
   else if (pctImp > 50) barCor = "#f57f17";
 
@@ -909,20 +910,7 @@ function showReport(casa) {
   const maxArea = Math.max(...casas.map(c => c.trincheira_area), 1);
   const maxVol = Math.max(...casas.map(c => c.trincheira_volume), 1);
 
-  // Seção de solo/hidrologia
-  let soloHtml = "";
-  if (casa.k_permeabilidade > 0 || casa.sp_area) {
-    soloHtml = `
-      <div class="report-section">
-        <h3 style="color:${cor.accent};border-bottom-color:${cor.bg};">Parâmetros do Solo</h3>
-        <table class="report-table">
-          ${casa.sp_area ? `<tr><td>Ponto de infiltração</td><td>${casa.sp_area}</td></tr>` : ""}
-          ${casa.k_permeabilidade > 0 ? `<tr><td>Permeabilidade (k)</td><td>${casa.k_permeabilidade.toExponential(2)} m/s</td></tr>` : ""}
-          ${casa.lencol_prof ? `<tr><td>Lençol freático</td><td>${casa.lencol_prof}</td></tr>` : ""}
-        </table>
-      </div>
-    `;
-  }
+  const soloHtml = "";
 
   // Seção livre (segurança)
   let livreHtml = "";
@@ -966,7 +954,7 @@ function showReport(casa) {
 
       <div class="report-section">
         <h3 style="color:${cor.accent};border-bottom-color:${cor.bg};">Indicadores e Localização</h3>
-        ${casa.k_permeabilidade > 0 ? gerarBarraPermeabilidadeE_Mapa(casa.k_permeabilidade, cor, casa.lote) : ""}
+        ${casa.k_permeabilidade > 0 ? gerarBarraPermeabilidadeE_Mapa(casa.k_permeabilidade, cor, casa.lote, casa) : ""}
         <div class="gauges-row" style="margin-top: 24px;">
           ${gerarGauge(casa.trincheira_area, maxArea, "Área Trincheira", "m²", cor.accent)}
           ${gerarGauge(casa.trincheira_volume, maxVol, "Volume Trincheira", "m³", cor.accent)}
@@ -1064,15 +1052,7 @@ function showPrintView() {
   const maxArea = Math.max(...casas.map(c => c.trincheira_area), 1);
   const maxVol = Math.max(...casas.map(c => c.trincheira_volume), 1);
 
-  const soloHtml = (casa.ponto_infiltracao || casa.k_permeabilidade || casa.lencol_freatico) ? `
-    <div class="report-section">
-      <h3 style="color:${cor.accent};border-bottom-color:${cor.bg};">Parâmetros do Solo</h3>
-      <div class="report-highlight" style="background:${cor.bg};">
-        ${casa.ponto_infiltracao ? `<div class="highlight-row"><span class="highlight-label">Ponto de Infiltração</span><span class="highlight-value" style="color:${cor.text};">${casa.ponto_infiltracao}</span></div>` : ''}
-        ${casa.k_permeabilidade ? `<div class="highlight-row"><span class="highlight-label">Coeficiente de Permeabilidade (k)</span><span class="highlight-value" style="color:${cor.text};">${casa.k_permeabilidade.toExponential(2)} m/s</span></div>` : ''}
-        ${casa.lencol_freatico ? `<div class="highlight-row"><span class="highlight-label">Profundidade do Lençol Freático</span><span class="highlight-value" style="color:${cor.text};">${Number(casa.lencol_freatico).toFixed(2)} m</span></div>` : ''}
-      </div>
-    </div>` : '';
+  // soloHtml removido - SP area agora no card de permeabilidade
 
   const livreHtml = casa.trincheira_livre ? (() => {
     const livreCor = casa.trincheira_livre >= 1.0 ? "#15803d" : (casa.trincheira_livre >= 0.5 ? "#f57f17" : "#c62828");
@@ -1120,7 +1100,6 @@ function showPrintView() {
         <h3 style="color:${cor.accent};border-bottom-color:${cor.bg};">Áreas do Lote</h3>
         ${gerarGaugeImpermeabilidade(casa, cor)}
       </div>
-      ${soloHtml}
     </div>
     ${pageFooter(1, 3)}
   </div>`;
@@ -1131,7 +1110,7 @@ function showPrintView() {
     <div class="a4-body">
       <div class="report-section">
         <h3 style="color:${cor.accent};border-bottom-color:${cor.bg};">Indicadores e Localização</h3>
-        ${casa.k_permeabilidade > 0 ? gerarBarraPermeabilidadeE_Mapa(casa.k_permeabilidade, cor, casa.lote) : ''}
+        ${casa.k_permeabilidade > 0 ? gerarBarraPermeabilidadeE_Mapa(casa.k_permeabilidade, cor, casa.lote, casa) : ''}
         <div class="gauges-row" style="margin-top:16px;">
           ${gerarGauge(casa.trincheira_area, maxArea, "Área Trincheira", "m²", cor.accent)}
           ${gerarGauge(casa.trincheira_volume, maxVol, "Volume Trincheira", "m³", cor.accent)}

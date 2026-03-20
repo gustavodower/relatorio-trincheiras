@@ -369,9 +369,9 @@ body.dark .upload-area.drag-over {
 
 /* ===== NEW MODERN REPORT HEADER ===== */
 .report-header-modern {
-  background: #3b82f6; /* Vibrant blue like the image */
+  background: #3b82f6;
   color: white;
-  padding: 48px 48px;
+  padding: 24px 40px;
   border-top-left-radius: 0;
   border-top-right-radius: 0;
 }
@@ -380,18 +380,18 @@ body.dark .upload-area.drag-over {
   display: inline-block;
   background: rgba(255, 255, 255, 0.2);
   color: white;
-  padding: 6px 16px;
+  padding: 4px 14px;
   border-radius: 20px;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   font-weight: 700;
-  margin-bottom: 24px;
+  margin-bottom: 10px;
 }
 
 .header-lote-title {
-  font-size: 3.2rem;
+  font-size: 2.4rem;
   font-weight: 900;
-  margin-bottom: 6px;
-  letter-spacing: -1.5px;
+  margin-bottom: 4px;
+  letter-spacing: -1px;
   line-height: 1.1;
 }
 
@@ -467,7 +467,7 @@ body.dark .upload-area.drag-over {
 .btn-next-float { right: 20px; }
 
 .report-body {
-  padding: 40px 40px 16px 40px;
+  padding: 24px 40px 16px 40px;
 }
 
 .report-section {
