@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Relatórios - Trincheiras de Infiltração</title>
+  <link rel="stylesheet" href="style.css?v=20">
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+
+  <!-- TELA DE UPLOAD -->
+  <div id="upload-screen" class="screen active">
+    <header class="main-header">
+      <button id="dark-toggle" class="btn-dark no-print" onclick="toggleDarkMode()">Modo Escuro</button>
+      <h1>Trincheiras de Infiltração</h1>
+      <p class="subtitle">Importe a planilha para gerar os relatórios</p>
+    </header>
+
+    <div class="upload-area" id="drop-zone">
+      <div class="upload-icon">
+        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+          <line x1="12" y1="18" x2="12" y2="12"/>
+          <polyline points="9 15 12 12 15 15"/>
+        </svg>
+      </div>
+      <h2>Arraste o arquivo Excel aqui</h2>
+      <p>ou clique para selecionar</p>
+      <p class="upload-hint">Aceita: LOTES - TRINCHEIRAS.V01.xlsx</p>
+      <input type="file" id="file-input" accept=".xlsx,.xlsm,.xls" style="display:none"/>
+    </div>
+  </div>
+
+  <!-- TELA INICIAL: Lista de casas -->
+  <div id="home-screen" class="screen">
+    <header class="main-header">
+      <button id="dark-toggle-2" class="btn-dark no-print" onclick="toggleDarkMode()">Modo Escuro</button>
+      <button class="btn-upload no-print" onclick="showUpload()">Trocar Planilha</button>
+      <h1>Trincheiras de Infiltração</h1>
+      <p class="subtitle" id="home-subtitle">Selecione uma casa para visualizar o relatório</p>
+    </header>
+
+    <div class="search-bar">
+      <input type="text" id="search-input" placeholder="Buscar por lote ou tipologia..." />
+    </div>
+
+    <div id="filter-chips" class="filter-chips"></div>
+
+    <div id="house-grid" class="house-grid"></div>
+  </div>
+
+  <!-- TELA DO RELATÓRIO -->
+  <div id="report-screen" class="screen">
+    <button class="btn-back no-print" onclick="showHome()">&#8592; Voltar</button>
+    <button class="btn-print no-print" onclick="window.print()">Imprimir / PDF</button>
+
+    <div id="report-content" class="report"></div>
+  </div>
+
+  <script src="app.js?v=20"></script>
+</body>
+</html>
