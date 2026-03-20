@@ -1,3 +1,7 @@
+// ===== DADOS DO MAPA =====
+let mapData = null;
+fetch('map_data.json').then(r => r.json()).then(d => { mapData = d; }).catch(() => {});
+
 // ===== CORES POR TIPOLOGIA =====
 const COR_AZUL_SUAVE = { bg: "#eff6ff", border: "#bfdbfe", text: "#1e3a8a", accent: "#3b82f6" };
 
@@ -304,6 +308,86 @@ function applyFilters() {
   renderCards(filtered);
 }
 
+// ===== MAPA DO LOTE =====
+const AREA_COLORS = {
+  SP01: '#3b82f6', SP02: '#8b5cf6', SP03: '#06b6d4', SP04: '#f59e0b',
+  SP05: '#10b981', SP06: '#ef4444', SP07: '#ec4899', SP08: '#6366f1'
+};
+
+function findHouseInMap(lote) {
+  if (!mapData) return null;
+  const h = mapData.houses;
+  // Direct match
+  if (h[lote]) return { ...h[lote], id: lote };
+  // Try with + → -
+  const dashLote = lote.replace(/\+/g, '-');
+  if (h[dashLote]) return { ...h[dashLote], id: dashLote };
+  // Try splitting "116+117" and averaging
+  const parts = lote.split('+').map(s => s.trim());
+  if (parts.length > 1 && parts.every(p => h[p])) {
+    const xs = parts.map(p => h[p].x);
+    const ys = parts.map(p => h[p].y);
+    return {
+      x: xs.reduce((a,b) => a+b) / xs.length,
+      y: ys.reduce((a,b) => a+b) / ys.length,
+      area: h[parts[0]].area,
+      id: lote
+    };
+  }
+  return null;
+}
+
+function renderLoteMap(lote) {
+  if (!mapData) return '<div class="perm-map-overlay"><span>Dados do mapa não disponíveis</span></div>';
+  const house = findHouseInMap(lote);
+  if (!house) return '<div class="perm-map-overlay"><span>Lote não encontrado no mapa</span></div>';
+
+  const areas = mapData.areas;
+  // Compute bounds
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  Object.values(areas).forEach(poly => poly.forEach(([x, y]) => {
+    if (x < minX) minX = x; if (x > maxX) maxX = x;
+    if (y < minY) minY = y; if (y > maxY) maxY = y;
+  }));
+  const pad = 30;
+  const w = 400, h = 400;
+  const rangeX = maxX - minX, rangeY = maxY - minY;
+  const scale = Math.min((w - 2*pad) / rangeX, (h - 2*pad) / rangeY);
+  const offX = (w - rangeX * scale) / 2, offY = (h - rangeY * scale) / 2;
+  const tx = x => offX + (x - minX) * scale;
+  const ty = y => h - (offY + (y - minY) * scale); // flip Y
+
+  let svg = '<svg viewBox="0 0 ' + w + ' ' + h + '" style="width:100%;height:100%;border-radius:8px;">';
+
+  // Draw area polygons
+  Object.entries(areas).forEach(([areaId, poly]) => {
+    const pts = poly.map(([x,y]) => tx(x) + ',' + ty(y)).join(' ');
+    const isActive = house.area === areaId;
+    const color = AREA_COLORS[areaId] || '#94a3b8';
+    svg += '<polygon points="' + pts + '" fill="' + color + '" fill-opacity="' + (isActive ? '0.35' : '0.1') + '" stroke="' + color + '" stroke-width="' + (isActive ? '2.5' : '1') + '" stroke-opacity="' + (isActive ? '1' : '0.4') + '"/>';
+    // Area label
+    const cx = poly.reduce((s,[x]) => s+x, 0) / poly.length;
+    const cy = poly.reduce((s,[,y]) => s+y, 0) / poly.length;
+    svg += '<text x="' + tx(cx) + '" y="' + ty(cy) + '" text-anchor="middle" fill="' + color + '" font-size="11" font-weight="700" opacity="' + (isActive ? '1' : '0.5') + '">' + areaId + '</text>';
+  });
+
+  // Draw all houses as small dots
+  Object.entries(mapData.houses).forEach(([id, pt]) => {
+    if (pt.x && pt.y) {
+      svg += '<circle cx="' + tx(pt.x) + '" cy="' + ty(pt.y) + '" r="2" fill="#94a3b8" opacity="0.3"/>';
+    }
+  });
+
+  // Highlight current house
+  const hx = tx(house.x), hy = ty(house.y);
+  svg += '<circle cx="' + hx + '" cy="' + hy + '" r="12" fill="#ef4444" opacity="0.2"/>';
+  svg += '<circle cx="' + hx + '" cy="' + hy + '" r="6" fill="#ef4444" stroke="white" stroke-width="2"/>';
+  svg += '<text x="' + hx + '" y="' + (hy - 16) + '" text-anchor="middle" fill="#1e293b" font-size="11" font-weight="800">Casa ' + lote + '</text>';
+
+  svg += '</svg>';
+  return svg;
+}
+
 // ===== COR DA FOLGA =====
 function getFolgaCor(folga) {
   if (folga >= 1.0) return { cor: "#15803d", bg: "#e8f5e9", label: "Segura" };
@@ -509,9 +593,7 @@ function gerarBarraPermeabilidadeE_Mapa(k, cor, lote) {
            <h4>Localização do Lote</h4>
         </div>
         <div class="perm-map-area">
-           <div class="perm-map-overlay">
-              <span>Aguardando integração do mapa...</span>
-           </div>
+           ${renderLoteMap(lote)}
         </div>
       </div>
     </div>
@@ -809,7 +891,9 @@ function gerarTempoRetornoBadge(tr) {
 }
 
 // ===== RELATÓRIO =====
+let currentCasa = null;
 function showReport(casa) {
+  currentCasa = casa;
   const reportContent = document.getElementById("report-content");
   const cor = getCorTipologia(casa.tipologia);
 
@@ -964,6 +1048,168 @@ function showReport(casa) {
     </div>
   `;
 
+  showScreen("report-screen");
+  window.scrollTo(0, 0);
+}
+
+// ===== VISTA DE IMPRESSÃO A4 =====
+let currentPrintCasa = null;
+
+function showPrintView() {
+  if (!currentCasa) return;
+  currentPrintCasa = currentCasa;
+  const casa = currentCasa;
+  const cor = getCorTipologia(casa.tipologia);
+  const dataAtual = new Date().toLocaleDateString("pt-BR", { day: "numeric", month: "long", year: "numeric" });
+  const maxArea = Math.max(...casas.map(c => c.trincheira_area), 1);
+  const maxVol = Math.max(...casas.map(c => c.trincheira_volume), 1);
+
+  const soloHtml = (casa.ponto_infiltracao || casa.k_permeabilidade || casa.lencol_freatico) ? `
+    <div class="report-section">
+      <h3 style="color:${cor.accent};border-bottom-color:${cor.bg};">Parâmetros do Solo</h3>
+      <div class="report-highlight" style="background:${cor.bg};">
+        ${casa.ponto_infiltracao ? `<div class="highlight-row"><span class="highlight-label">Ponto de Infiltração</span><span class="highlight-value" style="color:${cor.text};">${casa.ponto_infiltracao}</span></div>` : ''}
+        ${casa.k_permeabilidade ? `<div class="highlight-row"><span class="highlight-label">Coeficiente de Permeabilidade (k)</span><span class="highlight-value" style="color:${cor.text};">${casa.k_permeabilidade.toExponential(2)} m/s</span></div>` : ''}
+        ${casa.lencol_freatico ? `<div class="highlight-row"><span class="highlight-label">Profundidade do Lençol Freático</span><span class="highlight-value" style="color:${cor.text};">${Number(casa.lencol_freatico).toFixed(2)} m</span></div>` : ''}
+      </div>
+    </div>` : '';
+
+  const livreHtml = casa.trincheira_livre ? (() => {
+    const livreCor = casa.trincheira_livre >= 1.0 ? "#15803d" : (casa.trincheira_livre >= 0.5 ? "#f57f17" : "#c62828");
+    const livreLabel = casa.trincheira_livre >= 1.0 ? "Segura" : (casa.trincheira_livre >= 0.5 ? "Moderada" : "Reduzida");
+    return `<div class="highlight-row" style="border-color:${cor.border}30;">
+      <span class="highlight-label">Folga até lençol freático</span>
+      <span class="highlight-value" style="color:${livreCor};">${casa.trincheira_livre.toFixed(2)} m (${livreLabel})</span>
+    </div>`;
+  })() : '';
+
+  function pageHeader() {
+    return `<div class="a4-header">
+      <div class="a4-header-left">
+        <div>
+          <div class="a4-header-title">Mestra Engenharia Sustentável</div>
+          <div class="a4-header-sub">Relatório de Trincheira de Infiltração</div>
+        </div>
+      </div>
+      <div class="a4-header-lote">Lote ${casa.lote} — ${casa.tipologia || 'Sem Tipologia'}</div>
+    </div>`;
+  }
+
+  function pageFooter(num, total) {
+    return `<div class="a4-footer">
+      <span class="a4-footer-company">Mestra Engenharia Sustentável — Eng. Gustavo Moro Bassil Dower</span>
+      <span>${dataAtual} · Vila Carnaúba · Casa ${casa.lote}</span>
+      <span class="a4-footer-page">Página ${num}/${total}</span>
+    </div>`;
+  }
+
+  // PAGE 1: Header + TR + Áreas do Lote + Solo
+  const page1 = `<div class="a4-page">
+    ${pageHeader()}
+    <div class="a4-body">
+      <div style="text-align:center;margin-bottom:16px;">
+        <span class="report-modern-badge" style="display:inline-block;">${casa.tipologia || 'Sem Tipologia'}</span>
+        <h1 style="font-size:2rem;font-weight:900;color:#1a1a2e;margin:8px 0 4px;">Lote ${casa.lote}</h1>
+        <p style="color:#64748b;font-size:0.85rem;">${dataAtual}</p>
+      </div>
+      <div class="report-section">
+        <h3 style="color:${cor.accent};border-bottom-color:${cor.bg};">Tempo de Retorno</h3>
+        ${gerarTempoRetornoBadge(casa.tempo_retorno)}
+      </div>
+      <div class="report-section">
+        <h3 style="color:${cor.accent};border-bottom-color:${cor.bg};">Áreas do Lote</h3>
+        ${gerarGaugeImpermeabilidade(casa, cor)}
+      </div>
+      ${soloHtml}
+    </div>
+    ${pageFooter(1, 3)}
+  </div>`;
+
+  // PAGE 2: Indicadores + Desempenho + Dimensionamento
+  const page2 = `<div class="a4-page">
+    ${pageHeader()}
+    <div class="a4-body">
+      <div class="report-section">
+        <h3 style="color:${cor.accent};border-bottom-color:${cor.bg};">Indicadores e Localização</h3>
+        ${casa.k_permeabilidade > 0 ? gerarBarraPermeabilidadeE_Mapa(casa.k_permeabilidade, cor, casa.lote) : ''}
+        <div class="gauges-row" style="margin-top:16px;">
+          ${gerarGauge(casa.trincheira_area, maxArea, "Área Trincheira", "m²", cor.accent)}
+          ${gerarGauge(casa.trincheira_volume, maxVol, "Volume Trincheira", "m³", cor.accent)}
+        </div>
+      </div>
+      <div class="report-section">
+        <h3 style="color:${cor.accent};border-bottom-color:${cor.bg};">Desempenho Hidro-Sanitário</h3>
+        ${casa.tempo_esvaziamento > 0 ? `
+        <div class="report-highlight" style="background:#eff6ff;border:1px solid #bfdbfe;">
+          <div class="highlight-row">
+            <span class="highlight-label">Tempo de Esvaziamento</span>
+            <span class="highlight-value" style="color:${casa.tempo_esvaziamento <= 48 ? '#15803d' : '#c62828'};">
+              ${casa.tempo_esvaziamento.toFixed(1)} h ${casa.tempo_esvaziamento <= 48 ? '✅' : '⚠️'}
+            </span>
+          </div>
+          <div class="highlight-row" style="border-color:#bfdbfe;">
+            <span class="highlight-label">Vazão Entrada / Infiltração</span>
+            <span class="highlight-value">${casa.vazao_entrada.toFixed(2)} L/min | ${casa.vazao_saida.toFixed(2)} L/min</span>
+          </div>
+          <div class="highlight-row" style="border-color:#bfdbfe;">
+            <span class="highlight-label">Altura da Lâmina d'Água</span>
+            <span class="highlight-value">${casa.h_max_calculado.toFixed(2)} m</span>
+          </div>
+          <div class="highlight-row" style="border-color:#bfdbfe;">
+            <span class="highlight-label">Duração da Chuva Crítica</span>
+            <span class="highlight-value">${casa.chuva_critica_td.toFixed(0)} min</span>
+          </div>
+        </div>` : '<p style="color:#999;text-align:center;">Sem dados de desempenho</p>'}
+      </div>
+      <div class="report-section">
+        <h3 style="color:${cor.accent};border-bottom-color:${cor.bg};">Dimensionamento da Trincheira</h3>
+        <div class="report-highlight" style="background:${cor.bg};">
+          <div class="highlight-row" style="align-items:flex-start;">
+            <span class="highlight-label" style="padding-top:4px;">Dimensões (C × L × P)</span>
+            <div style="text-align:right;">
+              ${casa.trincheiras.length > 0 ? casa.trincheiras.map((t, i) => '<div class="highlight-value" style="color:' + cor.text + ';font-size:1.05rem;margin-bottom:6px;">T' + (i+1) + ': ' + t.l.toFixed(2) + 'm × ' + t.b.toFixed(2) + 'm × ' + t.h.toFixed(2) + 'm</div>').join('') : '<span class="highlight-value" style="color:#999;">N/A</span>'}
+            </div>
+          </div>
+          ${casa.trincheira_profundidade_total > 0 ? `
+          <div class="highlight-row" style="border-color:${cor.border}30;">
+            <span class="highlight-label">Profundidade total (P + folga)</span>
+            <span class="highlight-value" style="color:${cor.text};">${casa.trincheira_profundidade_total.toFixed(2)} m</span>
+          </div>` : ''}
+          <div class="highlight-row" style="border-color:${cor.border}30;">
+            <span class="highlight-label">Área da trincheira</span>
+            <span class="highlight-value" style="color:${cor.text};">${casa.trincheira_area.toFixed(2)} m²</span>
+          </div>
+          <div class="highlight-row" style="border-color:${cor.border}30;">
+            <span class="highlight-label">Volume da trincheira</span>
+            <span class="highlight-value" style="color:${cor.text};">${casa.trincheira_volume.toFixed(2)} m³</span>
+          </div>
+          ${livreHtml}
+        </div>
+      </div>
+    </div>
+    ${pageFooter(2, 3)}
+  </div>`;
+
+  // PAGE 3: Diagrama
+  const page3 = `<div class="a4-page">
+    ${pageHeader()}
+    <div class="a4-body">
+      <div class="report-section">
+        <h3 style="color:${cor.accent};border-bottom-color:${cor.bg};">Diagrama da Trincheira</h3>
+        <div class="diagram-wrapper">
+          ${gerarDiagramaTrincheira(casa, cor)}
+        </div>
+      </div>
+    </div>
+    ${pageFooter(3, 3)}
+  </div>`;
+
+  document.getElementById("print-pages").innerHTML = page1 + page2 + page3;
+  showScreen("print-screen");
+  window.scrollTo(0, 0);
+}
+
+function closePrintView() {
   showScreen("report-screen");
   window.scrollTo(0, 0);
 }

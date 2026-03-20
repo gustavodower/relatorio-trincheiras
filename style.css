@@ -896,8 +896,122 @@ body.dark .upload-area.drag-over {
   fill: var(--text-muted);
 }
 
+/* ===== A4 PRINT PAGES ===== */
+.a4-page {
+  width: 210mm;
+  min-height: 297mm;
+  max-height: 297mm;
+  background: white;
+  margin: 0 auto 24px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.12);
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+  box-sizing: border-box;
+}
+
+.a4-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 24px;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+  color: white;
+  flex-shrink: 0;
+}
+
+.a4-header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.a4-header-title {
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+}
+
+.a4-header-sub {
+  font-size: 0.7rem;
+  opacity: 0.7;
+}
+
+.a4-header-lote {
+  font-size: 0.85rem;
+  font-weight: 700;
+  background: rgba(255,255,255,0.15);
+  padding: 4px 14px;
+  border-radius: 20px;
+}
+
+.a4-body {
+  flex: 1;
+  padding: 20px 28px;
+  overflow: hidden;
+  font-size: 0.85rem;
+}
+
+.a4-body .report-section {
+  margin-bottom: 16px;
+}
+
+.a4-body .report-section h3 {
+  font-size: 0.85rem;
+  margin-bottom: 10px;
+  padding-bottom: 6px;
+}
+
+.a4-body .perm-grid {
+  gap: 12px;
+}
+
+.a4-body .perm-card {
+  padding: 12px;
+}
+
+.a4-body .gauges-row {
+  gap: 16px;
+}
+
+.a4-body .highlight-row {
+  padding: 6px 0;
+}
+
+.a4-body .report-highlight {
+  padding: 12px 16px;
+}
+
+.a4-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 24px;
+  border-top: 1px solid #e2e8f0;
+  background: #fafafa;
+  font-size: 0.65rem;
+  color: #64748b;
+  flex-shrink: 0;
+}
+
+.a4-footer-company {
+  font-weight: 700;
+  color: #0f3460;
+}
+
+.a4-footer-page {
+  font-weight: 600;
+}
+
 /* ===== PRINT ===== */
 @media print {
+  @page {
+    size: A4;
+    margin: 0;
+  }
+
   .no-print {
     display: none !important;
   }
@@ -920,9 +1034,20 @@ body.dark .upload-area.drag-over {
     margin: 0;
     box-shadow: none;
     border-radius: 0;
-    page-break-after: always;
   }
-  
+
+  .a4-page {
+    box-shadow: none;
+    border-radius: 0;
+    margin: 0;
+    page-break-after: always;
+    page-break-inside: avoid;
+  }
+
+  .a4-page:last-child {
+    page-break-after: auto;
+  }
+
   .btn-nav-float {
     display: none !important;
   }
@@ -938,7 +1063,11 @@ body.dark .upload-area.drag-over {
   .perm-card,
   .perm-bar-fill,
   .perm-map-overlay,
-  .area-breakdown {
+  .perm-map-area,
+  .area-breakdown,
+  .a4-header,
+  .a4-footer,
+  .a4-body {
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }

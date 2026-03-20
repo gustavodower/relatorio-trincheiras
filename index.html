@@ -54,9 +54,16 @@
   <!-- TELA DO RELATÓRIO -->
   <div id="report-screen" class="screen">
     <button class="btn-back no-print" onclick="showHome()">&#8592; Voltar</button>
-    <button class="btn-print no-print" onclick="window.print()">Imprimir / PDF</button>
+    <button class="btn-print no-print" onclick="showPrintView()">Imprimir / PDF</button>
 
     <div id="report-content" class="report"></div>
+  </div>
+
+  <!-- TELA DE IMPRESSÃO A4 -->
+  <div id="print-screen" class="screen">
+    <button class="btn-back no-print" onclick="closePrintView()">&#8592; Voltar ao Relatório</button>
+    <button class="btn-print no-print" onclick="window.print()">Imprimir / PDF</button>
+    <div id="print-pages"></div>
   </div>
 
   <script src="app.js?v=20"></script>
