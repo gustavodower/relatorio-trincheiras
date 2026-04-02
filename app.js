@@ -1260,24 +1260,8 @@ function showPrintView() {
     __FOOTER_PLACEHOLDER__
   </div>`;
 
-  // PAGE 2: Indicadores e Localização
+  // PAGE 2: Desempenho + Dimensionamento
   const page2 = `<div class="a4-page">
-    ${pageHeader()}
-    <div class="a4-body">
-      <div class="report-section">
-        <h3 style="color:${cor.accent};border-bottom-color:${cor.bg};">Indicadores e Localização</h3>
-        ${casa.k_permeabilidade > 0 ? gerarBarraPermeabilidadeE_Mapa(casa.k_permeabilidade, cor, casa.lote, casa) : ''}
-        <div class="gauges-row" style="margin-top:16px;">
-          ${gerarGauge(casa.trincheira_area, maxArea, "Área Trincheira", "m²", cor.accent)}
-          ${gerarGauge(casa.trincheira_volume, maxVol, "Volume Trincheira", "m³", cor.accent)}
-        </div>
-      </div>
-    </div>
-    __FOOTER_PLACEHOLDER__
-  </div>`;
-
-  // PAGE 3: Desempenho + Dimensionamento
-  const page3 = `<div class="a4-page">
     ${pageHeader()}
     <div class="a4-body">
       <div class="report-section">
@@ -1333,7 +1317,7 @@ function showPrintView() {
     __FOOTER_PLACEHOLDER__
   </div>`;
 
-  // PAGE 3: Memória de Cálculo (se houver dados de desempenho)
+  // PAGE: Memória de Cálculo (se houver dados de desempenho)
   const pageMemoria = casa.tempo_esvaziamento > 0 ? `<div class="a4-page">
     ${pageHeader()}
     <div class="a4-body">
@@ -1407,6 +1391,13 @@ function showPrintView() {
 
         </div>
       </div>
+      <div class="report-section" style="margin-top:20px;">
+        <h3 style="color:${cor.accent};border-bottom-color:${cor.bg};">Resumo da Trincheira</h3>
+        <div class="gauges-row">
+          ${gerarGauge(casa.trincheira_area, maxArea, "Área Trincheira", "m²", cor.accent)}
+          ${gerarGauge(casa.trincheira_volume, maxVol, "Volume Trincheira", "m³", cor.accent)}
+        </div>
+      </div>
     </div>
     __FOOTER_PLACEHOLDER__
   </div>` : '';
@@ -1441,7 +1432,7 @@ function showPrintView() {
   </div>` : '';
 
   // Montar páginas dinamicamente
-  const allPages = [page1, page2, page3, pageMemoria, pageDiagrama, pageScreenshot].filter(p => p);
+  const allPages = [page1, page2, pageMemoria, pageDiagrama, pageScreenshot].filter(p => p);
   const totalPages = allPages.length;
 
   // Substituir footers com numeração correta
