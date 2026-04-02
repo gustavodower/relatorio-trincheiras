@@ -5,50 +5,53 @@ fetch('map_data.json').then(r => r.json()).then(d => { mapData = d; }).catch(() 
 // ===== SCREENSHOTS =====
 const screenshotMap = new Map(); // lote => dataURL
 
+function handleScreenshotFiles(files) {
+  if (!files || !files.length) return;
+  let loaded = 0;
+
+  Array.from(files).forEach(file => {
+    const match = file.name.match(/(\d+(?:_\d+)*)/);
+    if (!match) return;
+
+    const loteKeys = match[1].split("_");
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const dataUrl = ev.target.result;
+      loteKeys.forEach(k => screenshotMap.set(k, dataUrl));
+      if (loteKeys.length > 1) {
+        screenshotMap.set(loteKeys.join(" + "), dataUrl);
+        screenshotMap.set(loteKeys.join(" E "), dataUrl);
+        screenshotMap.set(loteKeys.join("+"), dataUrl);
+      }
+      loaded++;
+      if (loaded === files.length) updateScreenshotCount();
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
 function setupScreenshots() {
-  const input = document.getElementById("screenshot-input");
-  if (!input) return;
-
-  input.addEventListener("change", (e) => {
-    const files = Array.from(e.target.files);
-    if (!files.length) return;
-    let loaded = 0;
-
-    files.forEach(file => {
-      // Extrair números do lote do nome do arquivo (ex: screenshot_110_111.png → ["110","111"])
-      const match = file.name.match(/(\d+(?:_\d+)*)/);
-      if (!match) return;
-
-      const loteKeys = match[1].split("_"); // ["110","111"]
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        const dataUrl = ev.target.result;
-        // Mapear para cada lote individual e também para o combinado
-        loteKeys.forEach(k => screenshotMap.set(k, dataUrl));
-        // Chave combinada: "110 + 111" ou "110"
-        if (loteKeys.length > 1) {
-          const combinedKey = loteKeys.join(" + ");
-          screenshotMap.set(combinedKey, dataUrl);
-          // Também com " E " e "+"
-          screenshotMap.set(loteKeys.join(" E "), dataUrl);
-          screenshotMap.set(loteKeys.join("+"), dataUrl);
-        }
-        loaded++;
-        if (loaded === files.length) updateScreenshotCount();
-      };
-      reader.readAsDataURL(file);
-    });
+  // Attach to all screenshot inputs (upload screen + home screen)
+  ["screenshot-input", "screenshot-input-home"].forEach(id => {
+    const input = document.getElementById(id);
+    if (!input) return;
+    input.addEventListener("change", (e) => handleScreenshotFiles(e.target.files));
   });
 }
 
 function updateScreenshotCount() {
-  const el = document.getElementById("screenshot-count");
-  if (!el) return;
   const unique = new Set(screenshotMap.values()).size;
-  el.textContent = unique > 0 ? `${unique} imagens carregadas` : "";
-  // Atualizar label
-  const label = document.getElementById("screenshot-label");
-  if (label && unique > 0) label.classList.add("has-files");
+  const text = unique > 0 ? `${unique} imagens carregadas` : "";
+
+  // Update both screens
+  ["screenshot-count", "screenshot-count-home"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = text;
+  });
+  ["screenshot-label", "screenshot-label-home"].forEach(id => {
+    const label = document.getElementById(id);
+    if (label && unique > 0) label.classList.add("has-files");
+  });
 }
 
 function getScreenshotForLote(lote) {
@@ -1500,31 +1503,35 @@ parseExcel = function(data) {
   dbSave("lastExcel", data).catch(() => {});
 };
 
-// Salvar screenshots quando carregadas
+// Salvar screenshots quando carregadas (persist to IndexedDB)
 const _originalSetupScreenshots = setupScreenshots;
 setupScreenshots = function() {
   _originalSetupScreenshots();
-  const input = document.getElementById("screenshot-input");
-  if (!input) return;
 
-  // Adicionar listener extra para salvar no IndexedDB
-  input.addEventListener("change", (e) => {
-    const files = Array.from(e.target.files);
-    if (!files.length) return;
-    const screenshotData = [];
-    let loaded = 0;
-    files.forEach(file => {
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        screenshotData.push({ name: file.name, data: ev.target.result });
-        loaded++;
-        if (loaded === files.length) {
-          dbSave("lastScreenshots", screenshotData).catch(() => {});
-        }
-      };
-      reader.readAsDataURL(file);
+  function addPersistenceListener(inputId) {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+    input.addEventListener("change", (e) => {
+      const files = Array.from(e.target.files);
+      if (!files.length) return;
+      const screenshotData = [];
+      let loaded = 0;
+      files.forEach(file => {
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          screenshotData.push({ name: file.name, data: ev.target.result });
+          loaded++;
+          if (loaded === files.length) {
+            dbSave("lastScreenshots", screenshotData).catch(() => {});
+          }
+        };
+        reader.readAsDataURL(file);
+      });
     });
-  });
+  }
+
+  addPersistenceListener("screenshot-input");
+  addPersistenceListener("screenshot-input-home");
 };
 
 // Re-run setup with persistence
