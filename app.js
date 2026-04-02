@@ -2,6 +2,88 @@
 let mapData = null;
 fetch('map_data.json').then(r => r.json()).then(d => { mapData = d; }).catch(() => {});
 
+// ===== SCREENSHOTS =====
+const screenshotMap = new Map(); // lote => dataURL
+
+function setupScreenshots() {
+  const input = document.getElementById("screenshot-input");
+  if (!input) return;
+
+  input.addEventListener("change", (e) => {
+    const files = Array.from(e.target.files);
+    if (!files.length) return;
+    let loaded = 0;
+
+    files.forEach(file => {
+      // Extrair números do lote do nome do arquivo (ex: screenshot_110_111.png → ["110","111"])
+      const match = file.name.match(/(\d+(?:_\d+)*)/);
+      if (!match) return;
+
+      const loteKeys = match[1].split("_"); // ["110","111"]
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const dataUrl = ev.target.result;
+        // Mapear para cada lote individual e também para o combinado
+        loteKeys.forEach(k => screenshotMap.set(k, dataUrl));
+        // Chave combinada: "110 + 111" ou "110"
+        if (loteKeys.length > 1) {
+          const combinedKey = loteKeys.join(" + ");
+          screenshotMap.set(combinedKey, dataUrl);
+          // Também com " E " e "+"
+          screenshotMap.set(loteKeys.join(" E "), dataUrl);
+          screenshotMap.set(loteKeys.join("+"), dataUrl);
+        }
+        loaded++;
+        if (loaded === files.length) updateScreenshotCount();
+      };
+      reader.readAsDataURL(file);
+    });
+  });
+}
+
+function updateScreenshotCount() {
+  const el = document.getElementById("screenshot-count");
+  if (!el) return;
+  const unique = new Set(screenshotMap.values()).size;
+  el.textContent = unique > 0 ? `${unique} imagens carregadas` : "";
+  // Atualizar label
+  const label = document.getElementById("screenshot-label");
+  if (label && unique > 0) label.classList.add("has-files");
+}
+
+function getScreenshotForLote(lote) {
+  // Tentar match direto
+  if (screenshotMap.has(lote)) return screenshotMap.get(lote);
+  // Tentar variações: "110 + 111" → tentar "110", "111"
+  const nums = lote.match(/\d+/g);
+  if (nums) {
+    // Tentar chave combinada
+    const combined = nums.join("_");
+    for (const [key, val] of screenshotMap) {
+      const keyNums = key.match(/\d+/g);
+      if (keyNums && keyNums.join("_") === combined) return val;
+    }
+    // Tentar qualquer número individual
+    for (const n of nums) {
+      if (screenshotMap.has(n)) return screenshotMap.get(n);
+    }
+  }
+  return null;
+}
+
+function gerarScreenshotHtml(casa, cor) {
+  const img = getScreenshotForLote(casa.lote);
+  if (!img) return '';
+  return `
+    <div class="report-section">
+      <h3 style="color:${cor.accent};border-bottom-color:${cor.bg};">Projeto — Implantação</h3>
+      <div class="screenshot-container">
+        <img src="${img}" alt="Screenshot do projeto - Lote ${casa.lote}" class="screenshot-img"/>
+      </div>
+    </div>
+  `;
+}
+
 // ===== CORES POR TIPOLOGIA =====
 const COR_AZUL_SUAVE = { bg: "#eff6ff", border: "#bfdbfe", text: "#1e3a8a", accent: "#3b82f6" };
 
@@ -939,11 +1021,8 @@ function showReport(casa) {
       </div>
 
       <div class="report-body">
-        
-        <div class="report-section">
-          <h3 style="color:${cor.accent};border-bottom-color:${cor.bg};">Tempo de Retorno</h3>
-        ${gerarTempoRetornoBadge(casa.tempo_retorno)}
-      </div>
+
+      ${gerarScreenshotHtml(casa, cor)}
 
       <div class="report-section">
         <h3 style="color:${cor.accent};border-bottom-color:${cor.bg};">Áreas do Lote</h3>
@@ -973,7 +1052,7 @@ function showReport(casa) {
           </div>
           <div class="highlight-row" style="border-color:#bfdbfe;">
             <span class="highlight-label">Vazão de Entrada (Qe) / Infiltração (Qs)</span>
-            <span class="highlight-value" style="color:var(--text-primary);">${casa.vazao_entrada.toFixed(2)} L/min  |  ${casa.vazao_saida.toFixed(2)} L/min</span>
+            <span class="highlight-value" style="color:var(--text-primary);">${casa.vazao_entrada.toFixed(2)} L/min  |  ${casa.vazao_saida.toExponential(2)} L/min</span>
           </div>
           <div class="highlight-row" style="border-color:#bfdbfe;">
             <span class="highlight-label">Altura da Lâmina d'Água (H Calc)</span>
@@ -991,6 +1070,79 @@ function showReport(casa) {
         </div>
         `}
       </div>
+
+      ${casa.tempo_esvaziamento > 0 ? `
+      <div class="report-section">
+        <h3 style="color:${cor.accent};border-bottom-color:${cor.bg};">Memória de Cálculo</h3>
+        <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:20px 24px;">
+
+          <div style="margin-bottom:16px;">
+            <div style="font-size:0.75rem;font-weight:700;color:#64748b;text-transform:uppercase;margin-bottom:8px;">1. Intensidade de Chuva (IDF — Cruz/CE)</div>
+            <div class="formula-box">
+              <span class="formula">i = <span style="color:#3b82f6;">3493,67</span> · [<span style="color:#3b82f6;">${casa.tempo_retorno}</span> + (−2,04)]<sup>0,143</sup> / (t<sub>d</sub> + 15,95)<sup>0,76</sup></span>
+            </div>
+            <div style="font-size:0.75rem;color:#64748b;margin-top:6px;line-height:1.6;">
+              A* = 1257,72 × (100/36) = 3493,67 &nbsp;|&nbsp; TR = ${casa.tempo_retorno} anos &nbsp;|&nbsp; t<sub>d,crit</sub> = ${casa.chuva_critica_td.toFixed(0)} min
+            </div>
+          </div>
+
+          <div style="margin-bottom:16px;">
+            <div style="font-size:0.75rem;font-weight:700;color:#64748b;text-transform:uppercase;margin-bottom:8px;">2. Vazão de Entrada (Método Racional)</div>
+            <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+              <div class="formula-box">
+                <span class="formula">Q<sub>e</sub> = C<sub>pond</sub> · i · A</span>
+              </div>
+              <div style="font-size:1.1rem;font-weight:800;color:#1e293b;">= ${casa.vazao_entrada.toFixed(2)} L/min</div>
+            </div>
+            <div style="font-size:0.75rem;color:#64748b;margin-top:6px;line-height:1.6;">
+              C<sub>pond</sub> = Σ(C<sub>j</sub> · A<sub>j</sub>) / Σ A<sub>j</sub> &nbsp;|&nbsp; C<sub>telhado</sub> = 0,9 &nbsp;|&nbsp; C<sub>piscina</sub> = 1,0 &nbsp;|&nbsp; C<sub>grama</sub> = 0,15
+              <br>Redução de 80% da área de telhado (Res. ADASA nº 9)
+            </div>
+          </div>
+
+          <div style="margin-bottom:16px;">
+            <div style="font-size:0.75rem;font-weight:700;color:#64748b;text-transform:uppercase;margin-bottom:8px;">3. Vazão de Infiltração</div>
+            <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+              <div class="formula-box">
+                <span class="formula">Q<sub>s</sub> = k · A<sub>inf</sub> · C<sub>s</sub></span>
+              </div>
+              <div style="font-size:1.1rem;font-weight:800;color:#1e293b;">= ${casa.vazao_saida.toExponential(2)} L/min</div>
+            </div>
+            <div style="font-size:0.75rem;color:#64748b;margin-top:6px;line-height:1.6;">
+              k = ${casa.k_permeabilidade.toExponential(2)} m/s &nbsp;|&nbsp; C<sub>s</sub> = 0,5 (coef. segurança)
+              <br>A<sub>inf</sub> = L · (H + b) — área lateral molhada
+            </div>
+          </div>
+
+          <div style="margin-bottom:16px;">
+            <div style="font-size:0.75rem;font-weight:700;color:#64748b;text-transform:uppercase;margin-bottom:8px;">4. Balanço Hídrico (Altura Máxima)</div>
+            <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+              <div class="formula-box">
+                <span class="formula">b · L · H = (Q<sub>e</sub> − Q<sub>s</sub>) · t<sub>d</sub> / P</span>
+              </div>
+              <div style="font-size:1.1rem;font-weight:800;color:#1e293b;">→ H<sub>máx</sub> = ${casa.h_max_calculado.toFixed(2)} m</div>
+            </div>
+            <div style="font-size:0.75rem;color:#64748b;margin-top:6px;line-height:1.6;">
+              P = 50% (porosidade) &nbsp;|&nbsp; t<sub>d,crit</sub> = ${casa.chuva_critica_td.toFixed(0)} min &nbsp;|&nbsp; H<sub>máx</sub> = max[H(t<sub>d</sub>)] para t<sub>d</sub> = 1…301 min
+            </div>
+          </div>
+
+          <div>
+            <div style="font-size:0.75rem;font-weight:700;color:#64748b;text-transform:uppercase;margin-bottom:8px;">5. Tempo de Esvaziamento</div>
+            <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+              <div class="formula-box">
+                <span class="formula">T<sub>e</sub> = V / Q<sub>s</sub></span>
+              </div>
+              <div style="font-size:1.1rem;font-weight:800;color:${casa.tempo_esvaziamento <= 48 ? '#15803d' : '#c62828'};">= ${casa.tempo_esvaziamento.toFixed(1)} h ${casa.tempo_esvaziamento <= 48 ? '(< 48h ✅)' : '(> 48h ⚠️)'}</div>
+            </div>
+            <div style="font-size:0.75rem;color:#64748b;margin-top:6px;line-height:1.6;">
+              V = b · L · H<sub>máx</sub> = ${casa.trincheira_volume.toFixed(2)} m³
+            </div>
+          </div>
+
+        </div>
+      </div>
+      ` : ''}
 
       <div class="report-section">
         <h3 style="color:${cor.accent};border-bottom-color:${cor.bg};">Dimensionamento da Trincheira</h3>
@@ -1015,6 +1167,10 @@ function showReport(casa) {
             <span class="highlight-value" style="color:${cor.text};">${casa.trincheira_volume.toFixed(2)} m³</span>
           </div>
           ${livreHtml}
+        </div>
+
+        <div style="margin-top:12px;">
+          ${gerarTempoRetornoBadge(casa.tempo_retorno)}
         </div>
       </div>
 
@@ -1128,7 +1284,7 @@ function showPrintView() {
           </div>
           <div class="highlight-row" style="border-color:#bfdbfe;">
             <span class="highlight-label">Vazão Entrada / Infiltração</span>
-            <span class="highlight-value">${casa.vazao_entrada.toFixed(2)} L/min | ${casa.vazao_saida.toFixed(2)} L/min</span>
+            <span class="highlight-value">${casa.vazao_entrada.toFixed(2)} L/min | ${casa.vazao_saida.toExponential(2)} L/min</span>
           </div>
           <div class="highlight-row" style="border-color:#bfdbfe;">
             <span class="highlight-label">Altura da Lâmina d'Água</span>
@@ -1183,7 +1339,27 @@ function showPrintView() {
     ${pageFooter(3, 3)}
   </div>`;
 
-  document.getElementById("print-pages").innerHTML = page1 + page2 + page3;
+  // Página 4: Screenshot do projeto (se houver)
+  const screenshotImg = getScreenshotForLote(casa.lote);
+  const page4 = screenshotImg ? `<div class="a4-page">
+    ${pageHeader()}
+    <div class="a4-body">
+      <div class="report-section">
+        <h3 style="color:${cor.accent};border-bottom-color:${cor.bg};">Projeto — Implantação</h3>
+        <div class="screenshot-container">
+          <img src="${screenshotImg}" alt="Screenshot do projeto - Lote ${casa.lote}" class="screenshot-img"/>
+        </div>
+      </div>
+    </div>
+    ${pageFooter(4, 4)}
+  </div>` : '';
+
+  const totalPages = screenshotImg ? 4 : 3;
+  const p1 = page1.replace(/Página \d+ de \d+/, `Página 1 de ${totalPages}`);
+  const p2 = page2.replace(/Página \d+ de \d+/, `Página 2 de ${totalPages}`);
+  const p3 = page3.replace(/Página \d+ de \d+/, `Página 3 de ${totalPages}`);
+
+  document.getElementById("print-pages").innerHTML = p1 + p2 + p3 + page4;
   showScreen("print-screen");
   window.scrollTo(0, 0);
 }
@@ -1199,6 +1375,7 @@ document.getElementById("search-input").addEventListener("input", () => applyFil
 // ===== INIT =====
 initDarkMode();
 setupUpload();
+setupScreenshots();
 
 // Tentar carregar a planilha hardcoded do servidor
 async function carregarPlanilhaPadrao() {
