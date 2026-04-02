@@ -1062,6 +1062,48 @@ body.dark .upload-area.drag-over {
     border-radius: 0;
   }
 
+  /* Evitar cortar seções ao meio na impressão normal do relatório */
+  .report-section {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .report-highlight {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .report-header-modern {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .formula-box {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .diagram-wrapper {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .screenshot-container {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .report-footer {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  /* Nunca separar título h3 do conteúdo seguinte */
+  .report-section h3 {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+
   .a4-page {
     box-shadow: none;
     border-radius: 0;
