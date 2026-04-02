@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Relatórios - Trincheiras de Infiltração</title>
-  <link rel="stylesheet" href="style.css?v=25">
+  <link rel="stylesheet" href="style.css?v=26">
   <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 </head>
 <body>
@@ -43,7 +43,7 @@
       <span id="screenshot-count" class="screenshot-count"></span>
     </div>
 
-    <p class="version-tag">v1.7.1 — Mestra Engenharia Sustentável</p>
+    <p class="version-tag">v1.7.2 — Mestra Engenharia Sustentável</p>
   </div>
 
   <!-- TELA INICIAL: Lista de casas -->
@@ -54,6 +54,12 @@
       <h1>Trincheiras de Infiltração</h1>
       <p class="subtitle" id="home-subtitle">Selecione uma casa para visualizar o relatório</p>
     </header>
+
+    <div class="search-bar">
+      <input type="text" id="search-input" placeholder="Buscar por lote ou tipologia..." />
+    </div>
+
+    <div id="filter-chips" class="filter-chips"></div>
 
     <div class="screenshot-upload no-print">
       <label class="btn-screenshot" id="screenshot-label-home">
@@ -66,12 +72,6 @@
       </label>
       <span id="screenshot-count-home" class="screenshot-count"></span>
     </div>
-
-    <div class="search-bar">
-      <input type="text" id="search-input" placeholder="Buscar por lote ou tipologia..." />
-    </div>
-
-    <div id="filter-chips" class="filter-chips"></div>
 
     <div id="house-grid" class="house-grid"></div>
   </div>
@@ -91,6 +91,6 @@
     <div id="print-pages"></div>
   </div>
 
-  <script src="app.js?v=25"></script>
+  <script src="app.js?v=26"></script>
 </body>
 </html>
