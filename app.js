@@ -1260,7 +1260,7 @@ function showPrintView() {
     __FOOTER_PLACEHOLDER__
   </div>`;
 
-  // PAGE 2: Indicadores + Desempenho + Dimensionamento
+  // PAGE 2: Indicadores e Localização
   const page2 = `<div class="a4-page">
     ${pageHeader()}
     <div class="a4-body">
@@ -1272,6 +1272,14 @@ function showPrintView() {
           ${gerarGauge(casa.trincheira_volume, maxVol, "Volume Trincheira", "m³", cor.accent)}
         </div>
       </div>
+    </div>
+    __FOOTER_PLACEHOLDER__
+  </div>`;
+
+  // PAGE 3: Desempenho + Dimensionamento
+  const page3 = `<div class="a4-page">
+    ${pageHeader()}
+    <div class="a4-body">
       <div class="report-section">
         <h3 style="color:${cor.accent};border-bottom-color:${cor.bg};">Desempenho Hidro-Sanitário</h3>
         ${casa.tempo_esvaziamento > 0 ? `
@@ -1433,7 +1441,7 @@ function showPrintView() {
   </div>` : '';
 
   // Montar páginas dinamicamente
-  const allPages = [page1, page2, pageMemoria, pageDiagrama, pageScreenshot].filter(p => p);
+  const allPages = [page1, page2, page3, pageMemoria, pageDiagrama, pageScreenshot].filter(p => p);
   const totalPages = allPages.length;
 
   // Substituir footers com numeração correta
