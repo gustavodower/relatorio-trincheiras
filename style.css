@@ -1199,6 +1199,15 @@ body.dark .upload-area.drag-over {
   }
 }
 
+/* ===== VERSION TAG ===== */
+.version-tag {
+  text-align: center;
+  font-size: 0.75rem;
+  color: var(--text-muted, #999);
+  margin-top: 24px;
+  letter-spacing: 0.5px;
+}
+
 /* ===== SCREENSHOT UPLOAD ===== */
 .screenshot-upload {
   display: flex;
