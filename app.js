@@ -1257,7 +1257,7 @@ function showPrintView() {
         ${gerarGaugeImpermeabilidade(casa, cor)}
       </div>
     </div>
-    ${pageFooter(1, 3)}
+    __FOOTER_PLACEHOLDER__
   </div>`;
 
   // PAGE 2: Indicadores + Desempenho + Dimensionamento
@@ -1322,11 +1322,89 @@ function showPrintView() {
         </div>
       </div>
     </div>
-    ${pageFooter(2, 3)}
+    __FOOTER_PLACEHOLDER__
   </div>`;
 
-  // PAGE 3: Diagrama
-  const page3 = `<div class="a4-page">
+  // PAGE 3: Memória de Cálculo (se houver dados de desempenho)
+  const pageMemoria = casa.tempo_esvaziamento > 0 ? `<div class="a4-page">
+    ${pageHeader()}
+    <div class="a4-body">
+      <div class="report-section">
+        <h3 style="color:${cor.accent};border-bottom-color:${cor.bg};">Memória de Cálculo</h3>
+        <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:20px 24px;">
+
+          <div style="margin-bottom:16px;">
+            <div style="font-size:0.75rem;font-weight:700;color:#64748b;text-transform:uppercase;margin-bottom:8px;">1. Intensidade de Chuva (IDF — Cruz/CE)</div>
+            <div class="formula-box">
+              <span class="formula">i = <span style="color:#3b82f6;">3493,67</span> · [<span style="color:#3b82f6;">${casa.tempo_retorno}</span> + (−2,04)]<sup>0,143</sup> / (t<sub>d</sub> + 15,95)<sup>0,76</sup></span>
+            </div>
+            <div style="font-size:0.75rem;color:#64748b;margin-top:6px;line-height:1.6;">
+              A* = 1257,72 × (100/36) = 3493,67 &nbsp;|&nbsp; TR = ${casa.tempo_retorno} anos &nbsp;|&nbsp; t<sub>d,crit</sub> = ${casa.chuva_critica_td.toFixed(0)} min
+            </div>
+          </div>
+
+          <div style="margin-bottom:16px;">
+            <div style="font-size:0.75rem;font-weight:700;color:#64748b;text-transform:uppercase;margin-bottom:8px;">2. Vazão de Entrada (Método Racional)</div>
+            <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+              <div class="formula-box">
+                <span class="formula">Q<sub>e</sub> = C<sub>pond</sub> · i · A</span>
+              </div>
+              <div style="font-size:1.1rem;font-weight:800;color:#1e293b;">= ${casa.vazao_entrada.toFixed(2)} L/min</div>
+            </div>
+            <div style="font-size:0.75rem;color:#64748b;margin-top:6px;line-height:1.6;">
+              C<sub>pond</sub> = Σ(C<sub>j</sub> · A<sub>j</sub>) / Σ A<sub>j</sub> &nbsp;|&nbsp; C<sub>telhado</sub> = 0,9 &nbsp;|&nbsp; C<sub>piscina</sub> = 1,0 &nbsp;|&nbsp; C<sub>grama</sub> = 0,15
+              <br>Redução de 80% da área de telhado (Res. ADASA nº 9)
+            </div>
+          </div>
+
+          <div style="margin-bottom:16px;">
+            <div style="font-size:0.75rem;font-weight:700;color:#64748b;text-transform:uppercase;margin-bottom:8px;">3. Vazão de Infiltração</div>
+            <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+              <div class="formula-box">
+                <span class="formula">Q<sub>s</sub> = k · A<sub>inf</sub> · C<sub>s</sub></span>
+              </div>
+              <div style="font-size:1.1rem;font-weight:800;color:#1e293b;">= ${casa.vazao_saida.toExponential(2)} L/min</div>
+            </div>
+            <div style="font-size:0.75rem;color:#64748b;margin-top:6px;line-height:1.6;">
+              k = ${casa.k_permeabilidade.toExponential(2)} m/s &nbsp;|&nbsp; C<sub>s</sub> = 0,5 (coef. segurança)
+              <br>A<sub>inf</sub> = L · (H + b) — área lateral molhada
+            </div>
+          </div>
+
+          <div style="margin-bottom:16px;">
+            <div style="font-size:0.75rem;font-weight:700;color:#64748b;text-transform:uppercase;margin-bottom:8px;">4. Balanço Hídrico (Altura Máxima)</div>
+            <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+              <div class="formula-box">
+                <span class="formula">b · L · H = (Q<sub>e</sub> − Q<sub>s</sub>) · t<sub>d</sub> / P</span>
+              </div>
+              <div style="font-size:1.1rem;font-weight:800;color:#1e293b;">→ H<sub>máx</sub> = ${casa.h_max_calculado.toFixed(2)} m</div>
+            </div>
+            <div style="font-size:0.75rem;color:#64748b;margin-top:6px;line-height:1.6;">
+              P = 50% (porosidade) &nbsp;|&nbsp; t<sub>d,crit</sub> = ${casa.chuva_critica_td.toFixed(0)} min &nbsp;|&nbsp; H<sub>máx</sub> = max[H(t<sub>d</sub>)] para t<sub>d</sub> = 1…301 min
+            </div>
+          </div>
+
+          <div>
+            <div style="font-size:0.75rem;font-weight:700;color:#64748b;text-transform:uppercase;margin-bottom:8px;">5. Tempo de Esvaziamento</div>
+            <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+              <div class="formula-box">
+                <span class="formula">T<sub>e</sub> = V / Q<sub>s</sub></span>
+              </div>
+              <div style="font-size:1.1rem;font-weight:800;color:${casa.tempo_esvaziamento <= 48 ? '#15803d' : '#c62828'};">= ${casa.tempo_esvaziamento.toFixed(1)} h ${casa.tempo_esvaziamento <= 48 ? '(< 48h ✅)' : '(> 48h ⚠️)'}</div>
+            </div>
+            <div style="font-size:0.75rem;color:#64748b;margin-top:6px;line-height:1.6;">
+              V = b · L · H<sub>máx</sub> = ${casa.trincheira_volume.toFixed(2)} m³
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+    __FOOTER_PLACEHOLDER__
+  </div>` : '';
+
+  // PAGE: Diagrama
+  const pageDiagrama = `<div class="a4-page">
     ${pageHeader()}
     <div class="a4-body">
       <div class="report-section">
@@ -1336,12 +1414,12 @@ function showPrintView() {
         </div>
       </div>
     </div>
-    ${pageFooter(3, 3)}
+    __FOOTER_PLACEHOLDER__
   </div>`;
 
-  // Página 4: Screenshot do projeto (se houver)
+  // PAGE: Screenshot do projeto (se houver)
   const screenshotImg = getScreenshotForLote(casa.lote);
-  const page4 = screenshotImg ? `<div class="a4-page">
+  const pageScreenshot = screenshotImg ? `<div class="a4-page">
     ${pageHeader()}
     <div class="a4-body">
       <div class="report-section">
@@ -1351,15 +1429,20 @@ function showPrintView() {
         </div>
       </div>
     </div>
-    ${pageFooter(4, 4)}
+    __FOOTER_PLACEHOLDER__
   </div>` : '';
 
-  const totalPages = screenshotImg ? 4 : 3;
-  const p1 = page1.replace(/Página \d+ de \d+/, `Página 1 de ${totalPages}`);
-  const p2 = page2.replace(/Página \d+ de \d+/, `Página 2 de ${totalPages}`);
-  const p3 = page3.replace(/Página \d+ de \d+/, `Página 3 de ${totalPages}`);
+  // Montar páginas dinamicamente
+  const allPages = [page1, page2, pageMemoria, pageDiagrama, pageScreenshot].filter(p => p);
+  const totalPages = allPages.length;
 
-  document.getElementById("print-pages").innerHTML = p1 + p2 + p3 + page4;
+  // Substituir footers com numeração correta
+  const finalHtml = allPages.map((page, i) => {
+    return page.replace('__FOOTER_PLACEHOLDER__', pageFooter(i + 1, totalPages))
+               .replace(/Página \d+\/\d+/, `Página ${i + 1}/${totalPages}`);
+  }).join('');
+
+  document.getElementById("print-pages").innerHTML = finalHtml;
   showScreen("print-screen");
   window.scrollTo(0, 0);
 }
