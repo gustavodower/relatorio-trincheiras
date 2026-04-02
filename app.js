@@ -1459,22 +1459,117 @@ initDarkMode();
 setupUpload();
 setupScreenshots();
 
-// Tentar carregar a planilha hardcoded do servidor
-async function carregarPlanilhaPadrao() {
-  try {
-    const uploadArea = document.querySelector(".upload-area h2");
-    if (uploadArea) uploadArea.textContent = "Carregando planilha padrão...";
-    
-    const res = await fetch("/api/planilha");
-    if (!res.ok) throw new Error("Planilha padrão não disponível no servidor");
-    
-    const buffer = await res.arrayBuffer();
-    parseExcel(new Uint8Array(buffer));
-  } catch (err) {
-    console.log("Iniciando com seleção manual:", err.message);
-    const uploadArea = document.querySelector(".upload-area h2");
-    if (uploadArea) uploadArea.textContent = "Arraste o arquivo Excel aqui";
-  }
+// ===== INDEXEDDB PERSISTENCE =====
+function openDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open("TrincheirasDB", 1);
+    req.onupgradeneeded = () => {
+      const db = req.result;
+      if (!db.objectStoreNames.contains("files")) db.createObjectStore("files");
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
 }
 
-carregarPlanilhaPadrao();
+async function dbSave(key, value) {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction("files", "readwrite");
+    tx.objectStore("files").put(value, key);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+async function dbLoad(key) {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction("files", "readonly");
+    const req = tx.objectStore("files").get(key);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+// Salvar Excel quando carregado
+const _originalParseExcel = parseExcel;
+parseExcel = function(data) {
+  _originalParseExcel(data);
+  // Salvar no IndexedDB para próxima sessão
+  dbSave("lastExcel", data).catch(() => {});
+};
+
+// Salvar screenshots quando carregadas
+const _originalSetupScreenshots = setupScreenshots;
+setupScreenshots = function() {
+  _originalSetupScreenshots();
+  const input = document.getElementById("screenshot-input");
+  if (!input) return;
+
+  // Adicionar listener extra para salvar no IndexedDB
+  input.addEventListener("change", (e) => {
+    const files = Array.from(e.target.files);
+    if (!files.length) return;
+    const screenshotData = [];
+    let loaded = 0;
+    files.forEach(file => {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        screenshotData.push({ name: file.name, data: ev.target.result });
+        loaded++;
+        if (loaded === files.length) {
+          dbSave("lastScreenshots", screenshotData).catch(() => {});
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+  });
+};
+
+// Re-run setup with persistence
+setupScreenshots();
+
+// Restaurar screenshots do IndexedDB
+function restoreScreenshotsFromDB(savedScreenshots) {
+  savedScreenshots.forEach(item => {
+    const match = item.name.match(/(\d+(?:_\d+)*)/);
+    if (!match) return;
+    const loteKeys = match[1].split("_");
+    loteKeys.forEach(k => screenshotMap.set(k, item.data));
+    if (loteKeys.length > 1) {
+      screenshotMap.set(loteKeys.join(" + "), item.data);
+      screenshotMap.set(loteKeys.join(" E "), item.data);
+      screenshotMap.set(loteKeys.join("+"), item.data);
+    }
+  });
+  updateScreenshotCount();
+}
+
+// Carregar dados salvos ou planilha padrão
+async function carregarDados() {
+  const uploadArea = document.querySelector(".upload-area h2");
+
+  // 1. Tentar restaurar screenshots do IndexedDB
+  try {
+    const savedScreenshots = await dbLoad("lastScreenshots");
+    if (savedScreenshots && savedScreenshots.length > 0) {
+      restoreScreenshotsFromDB(savedScreenshots);
+    }
+  } catch (e) { console.log("Sem screenshots salvos:", e.message); }
+
+  // 2. Tentar restaurar Excel do IndexedDB
+  try {
+    const savedExcel = await dbLoad("lastExcel");
+    if (savedExcel) {
+      if (uploadArea) uploadArea.textContent = "Carregando dados salvos...";
+      parseExcel(savedExcel);
+      return;
+    }
+  } catch (e) { console.log("Sem Excel salvo:", e.message); }
+
+  // 3. Nenhum dado salvo — aguardar seleção manual
+  if (uploadArea) uploadArea.textContent = "Arraste o arquivo Excel aqui";
+}
+
+carregarDados();
