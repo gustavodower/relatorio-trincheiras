@@ -1212,9 +1212,10 @@ body.dark .upload-area.drag-over {
 .screenshot-upload {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 12px;
   max-width: 900px;
-  margin: 0 auto 12px;
+  margin: 16px auto 0;
   padding: 0 20px;
 }
 

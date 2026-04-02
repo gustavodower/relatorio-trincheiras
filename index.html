@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Relatórios - Trincheiras de Infiltração</title>
-  <link rel="stylesheet" href="style.css?v=21">
+  <link rel="stylesheet" href="style.css?v=22">
   <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 </head>
 <body>
@@ -31,7 +31,19 @@
       <p class="upload-hint">Aceita: LOTES - TRINCHEIRAS.V01.xlsx</p>
       <input type="file" id="file-input" accept=".xlsx,.xlsm,.xls" style="display:none"/>
     </div>
-    <p class="version-tag">v1.4.0 — Mestra Engenharia Sustentável</p>
+    <div class="screenshot-upload">
+      <label class="btn-screenshot" id="screenshot-label">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/>
+          <polyline points="21 15 16 10 5 21"/>
+        </svg>
+        Carregar Screenshots do Projeto
+        <input type="file" id="screenshot-input" multiple accept="image/*" style="display:none"/>
+      </label>
+      <span id="screenshot-count" class="screenshot-count"></span>
+    </div>
+
+    <p class="version-tag">v1.5.0 — Mestra Engenharia Sustentável</p>
   </div>
 
   <!-- TELA INICIAL: Lista de casas -->
@@ -42,18 +54,6 @@
       <h1>Trincheiras de Infiltração</h1>
       <p class="subtitle" id="home-subtitle">Selecione uma casa para visualizar o relatório</p>
     </header>
-
-    <div class="screenshot-upload no-print">
-      <label class="btn-screenshot" id="screenshot-label">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/>
-          <polyline points="21 15 16 10 5 21"/>
-        </svg>
-        Carregar Screenshots
-        <input type="file" id="screenshot-input" multiple accept="image/*" style="display:none"/>
-      </label>
-      <span id="screenshot-count" class="screenshot-count"></span>
-    </div>
 
     <div class="search-bar">
       <input type="text" id="search-input" placeholder="Buscar por lote ou tipologia..." />
@@ -79,6 +79,6 @@
     <div id="print-pages"></div>
   </div>
 
-  <script src="app.js?v=21"></script>
+  <script src="app.js?v=22"></script>
 </body>
 </html>
